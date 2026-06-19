@@ -1,4 +1,4 @@
-# ct-watch — Design Document
+# Akita — Design Document
 
 **Status:** Draft · **Owner:** _you_ · **Last updated:** 2026-06-17
 
@@ -6,14 +6,14 @@
 
 ## 1. Summary
 
-`ct-watch` is a service that continuously monitors public Certificate
+`Akita` is a service that continuously monitors public Certificate
 Transparency (CT) logs for newly issued certificates whose domains match a
 configured watchlist — exact domains, subdomains, and typosquat/look-alike
 patterns. On a match it emits a structured alert to one or more sinks
 (stdout, file, webhook, message queue). The goal is **early detection of
 phishing and brand-impersonation infrastructure**: a malicious look-alike
 domain that obtains a TLS certificate becomes publicly visible in CT logs
-within minutes of issuance, and `ct-watch` turns that public signal into an
+within minutes of issuance, and `Akita` turns that public signal into an
 actionable alert.
 
 This document covers the production design: reliability, observability,
@@ -176,10 +176,8 @@ Three rule classes, cheapest first:
    substitution, adjacent-key typos, TLD swaps, combosquatting affixes) into a
    lookup set. Plus an optional **edit-distance** check (Levenshtein ≤ N) on
    the registrable domain to catch permutations the generator misses.
-
 Public Suffix List is used to compute the registrable domain correctly
-(`foo.co.uk` etc.) across all rule classes. Every match records *which rule
-fired* for analyst triage.
+(`foo.co.uk` etc.). Every match records *which rule fired* for analyst triage.
 
 ### 5.5 Dedup + fanout
 TTL/LRU cache keyed by `normalized_domain|rule`. Suppresses precert+cert pairs
@@ -237,13 +235,13 @@ field) so downstream consumers don't break when fields are added.
 
 ## 7. Configuration
 
-Precedence: flags > environment (`CTWATCH_*`) > config file > defaults.
+Precedence: flags > environment (`AKITA_*`) > config file > defaults.
 
 ```yaml
 logs:
   discovery: dynamic            # dynamic | static
   pin:                          # used when discovery=static, or to restrict dynamic
-    - https://oak.ct.letsencrypt.org/2026h2/
+    - https://oak.ct.letsencrypt.org/2025h2/
   refresh_interval: 12h
 
 watch:
@@ -267,7 +265,7 @@ alerts:
   webhook: { enabled: false, url: "", timeout: 5s, retries: 3 }
 
 state:
-  path: ./ct-watch.state
+  path: ./Akita.state
 
 observability:
   http_addr: ":9090"            # /metrics, /healthz, /readyz
@@ -312,7 +310,7 @@ observability:
 - Reads only public data; no credentials needed for CT logs. Webhook secrets
   (if any) come from env, never logged.
 - Dependencies pinned in `go.mod`/`go.sum`; CI runs `govulncheck` and
-  `go vet`; minimal dependency surface.
+  `go vet`; dependable, minimal dependency surface.
 - Container: distroless/static base, non-root user, read-only root FS, only the
   state path writable.
 - Input safety: treat all cert fields as untrusted strings; bound sizes; the
@@ -355,7 +353,7 @@ observability:
 Each milestone is independently shippable and leaves `main` green.
 
 **M0 — Project skeleton & CI** _(foundation)_
-- Module layout (`/cmd/ct-watch`, `/internal/...`), `Makefile`, `golangci-lint`,
+- Module layout (`/cmd/Akita`, `/internal/...`), `Makefile`, `golangci-lint`,
   GitHub Actions (build, vet, test, `govulncheck`), `Dockerfile`.
 - Config loader with flags/env/file precedence + tests.
 
